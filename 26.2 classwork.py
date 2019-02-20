@@ -23,12 +23,12 @@ def getencoding(http_file):
     return enc
 
 
-def download(links):
+def download(links, download_to = "/home/stas/Documents/testing26"):
     url_to_download = "http://www.matfiz.univ.kiev.ua"
     for link in links:
         page_url = url_to_download + link
         link2 = link.replace("userfiles/files/", "")
-        result = urlretrieve(page_url, "/home/stas/Documents/testing26{}".format(link2))  # завантажуємо файл
+        result = urlretrieve(page_url, download_to+link2)  # завантажуємо файл
     print(result[0], result[1], sep='\n')
 
 
@@ -54,7 +54,7 @@ class MyParser(html.parser.HTMLParser):
         return self.pieces
 
 
-class WikiDef:
+class mainD:
 
     def __init__(self, url):
         self.url = url
@@ -89,6 +89,6 @@ if __name__ == '__main__':
         url = 'http://www.matfiz.univ.kiev.ua/pages/{}'.format(page)
     else:
         url = sys.argv[1]
-    wd = WikiDef(url)
-    download(wd.definition)
+    rez = mainD(url)
+    download(rez.definition)
 

@@ -1,1 +1,1 @@
-# my univesitys programs
+# my universities programs

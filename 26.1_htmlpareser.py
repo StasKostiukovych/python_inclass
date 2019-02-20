@@ -1,4 +1,4 @@
-# T26_31 Отримання означення з вікіпедії за запитом.
+# зміна часу на компютері.
 
 import html.parser
 from urllib.request import urlopen
@@ -56,7 +56,7 @@ class MyParser(html.parser.HTMLParser):
         return ' '.join(self.pieces)
 
 
-class WikiDef:
+class Def:
 
     def __init__(self, url):
         self.url = url
@@ -81,17 +81,6 @@ class WikiDef:
         return self._def
 
 
-    def change_time(self, server_time):
-        now = datetime.datetime.now()
-        dt = datetime.datetime.strptime(server_time, '%Y,%m,%d,%H,%M,%S')
-        print(now)
-        print(dt)
-
-        if now != dt:
-            subprocess.call(['sudo', 'date', '-s', '{:}'.format(dt.strftime('%Y-%m-%d %H:%M:%S'))], shell=True)
-            #print("success!!!")
-
-
     def _linux_set_time(self,  server_time):
         dt = datetime.datetime.strptime(server_time, '%Y,%m,%d,%H,%M,%S')
         time_string = dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -109,7 +98,7 @@ if __name__ == '__main__':
         url = 'https://time.online.ua/in/kyiv/'
     else:
         url = sys.argv[1]
-    wd = WikiDef(url)
+    wd = Def(url)
     #print('Definition:', wd.definition)
 
 

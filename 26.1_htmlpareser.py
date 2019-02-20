@@ -86,8 +86,8 @@ class Def:
         time_string = dt.strftime('%Y-%m-%d %H:%M:%S')
 
         #subprocess.call(shlex.split("timedatectl set-ntp false"))  # May be necessary
-        subprocess.call(shlex.split("sudo date -s '%s'" % time_string), stdin=open("/home/stas/Downloads/1.txt"))
-        subprocess.call(shlex.split("sudo hwclock -w"), stdin=open("/home/stas/Downloads/1.txt"))
+        subprocess.call(shlex.split("sudo date -s '%s'" % time_string))
+        subprocess.call(shlex.split("sudo hwclock -w"))
 
 
 

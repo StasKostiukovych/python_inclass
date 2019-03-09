@@ -6,11 +6,12 @@ from openpyxl import load_workbook
 
 class CurencyConverter:
 
-    def __init__(self):
+    def __init__(self, path_to_download):
         self.cur_array = []
         self.rez = 0
         self.list_of_currency()
         self.final_write()
+        self.path_to_download = path_to_download
 
     #
     def rez_lst(self, key1, key2):
@@ -29,8 +30,7 @@ class CurencyConverter:
         lenth = len(main_cur)
         for i in range(lenth):
             for j in range(lenth):
-                if i != j:
-                    self.cur_array.append([main_cur[i], main_cur[j]])
+                self.cur_array.append([main_cur[i], main_cur[j]])
 
 
     def final_write(self):
@@ -41,14 +41,14 @@ class CurencyConverter:
 
 
     def write_xlsx(self, array):
-        wb = load_workbook('/home/stas/Documents/currency.xlsx')
+        wb = load_workbook(self.path_to_download)
         ws = wb.create_sheet(0)
         for row in array:
             ws.append(row)
-        wb.save(filename='/home/stas/Documents/currency.xlsx')
+        wb.save(filename=self.path_to_download)
 
 
-CurencyConverter()
+CurencyConverter("/home/stas/Documents/currency.xlsx")
 
 
 

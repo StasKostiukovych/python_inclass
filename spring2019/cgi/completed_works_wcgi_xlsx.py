@@ -1,15 +1,13 @@
 from openpyxl import load_workbook
 import cgi
 from wsgiref.simple_server import make_server
+import pandas as pd
 
 HTML_PAGE = """<html>
 <title>registration</title>
 <body>
 <h3>Hotel registration</h3>
-<br>
 
-<br>
-<br>
 <form method=POST action=>
 <table>
 <tr>
@@ -21,6 +19,13 @@ Type of act:
 <option value="Works">Works</option>
 <option value="Acts">Acts</option>
 <option value="Points">Points</option>
+</select>
+<br>
+
+Show or add:
+<select name="option">
+<option value="show">show</option>
+<option value="add">add</option>
 </select>
 <br>
 
@@ -40,13 +45,13 @@ Type of act:
 GROUNDS_HTML = """<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Стипендія</title>
+<title>Completed works</title>
 </head>
 <body>
 <form method=POST action="">
-<h1 style="text-align: center">Додати інформацію про студента</h1>
+<h1 style="text-align: center">Add grounds</h1>
 <p style="text-align: center">
-<font size="4" color="blue">Заповніть поля:</font><br>
+<font size="4" color="blue">fill all entries:</font><br>
 <table align="center" style="text-align: center">
 <tr>
 <td>ID:</td>
@@ -72,20 +77,19 @@ GROUNDS_HTML = """<html lang="en">
 WORKS_HTML = """<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Стипендія</title>
+<title>completed works</title>
 </head>
 <body>
 <form method=POST action="">
-<h1 style="text-align: center">Додати інформацію про студента</h1>
+<h1 style="text-align: center">add works</h1>
 <p style="text-align: center">
-<font size="4" color="blue">Заповніть поля:</font><br>
+<font size="4" color="blue">fill all entries:</font><br>
 <table align="center" style="text-align: center">
 <tr>
 <td>ID:</td>
 <td><input type=text name=s6 value=""></td>
 <td>Name:</td>
 <td><input type=text name=s7 value=""></td>
-<td>Address:</td>
 
 </table>
 <input type=submit value="Add">
@@ -97,13 +101,13 @@ WORKS_HTML = """<html lang="en">
 ACTS_HTML = """<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Стипендія</title>
+<title>Completed works</title>
 </head>
 <body>
 <form method=POST action="">
-<h1 style="text-align: center">Додати інформацію про студента</h1>
+<h1 style="text-align: center">Add acts</h1>
 <p style="text-align: center">
-<font size="4" color="blue">Заповніть поля:</font><br>
+<font size="4" color="blue">fill all entries:</font><br>
 <table align="center" style="text-align: center">
 <tr>
 <td>ID:</td>
@@ -127,13 +131,13 @@ ACTS_HTML = """<html lang="en">
 POINTS_HTML = """<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Стипендія</title>
+<title>completed works</title>
 </head>
 <body>
 <form method=POST action="">
-<h1 style="text-align: center">Додати інформацію про студента</h1>
+<h1 style="text-align: center">all ponts</h1>
 <p style="text-align: center">
-<font size="4" color="blue">Заповніть поля:</font><br>
+<font size="4" color="blue">fill all entries:</font><br>
 <table align="center" style="text-align: center">
 <tr>
 <td>W_id:</td>
@@ -147,6 +151,14 @@ POINTS_HTML = """<html lang="en">
 </body>
 </html>"""
 
+def show_xml(sheet, filename="info.xlsx"):
+    html_df = ""
+    df = pd.read_excel(filename, sheet_name=sheet)
+    for row in df.values:
+        html_df += "\n<br>"
+        for val in row:
+            html_df += str(val) +" "
+    return html_df
 
 def to_xml(array, sheet, filename="info.xlsx"):
     wb = load_workbook(filename)
@@ -174,13 +186,13 @@ def application(environ, start_response):
         html = HTML_PAGE
 
         if state == 1:
-            if 's1' in form and 's2' in form and 's3' in form and 's4' in form:
+            if 's1' in form and 's2' in form and 's3' in form and 's4' in form and 's5' in form:
                 to_xml([str(form['s1'].value), str(form['s2'].value), str(form['s3'].value),
-                        str(form['s4'].value)], "grounds")
+                        str(form['s4'].value), str(form['s5'].value)], "grounds")
 
         elif state == 2:
             if 's6' in form and 's7' in form:
-                to_xml([str(form['s1'].value), str(form['s2'].value)], "works")
+                to_xml([str(form['s6'].value), str(form['s7'].value)], "works")
 
 
         elif state == 3:
@@ -190,32 +202,52 @@ def application(environ, start_response):
 
         elif state == 4:
             if 's13' in form and 's14' in form:
-                to_xml([str(form['s8'].value), str(form['s9'].value)], "points")
+                to_xml([str(form['s13'].value), str(form['s14'].value)], "points")
                 
         else:
             html = HTML_PAGE
 
         if 'regim' in form:
             val = form['regim'].value
+            option = form['option'].value
+            if option == "add":
+                if val == 'Grounds':
+                    state = 1
+                    html = GROUNDS_HTML
 
-            if val == 'Grounds':
-                state = 1
-                html = GROUNDS_HTML
+                elif val == 'Works':
+                    state = 2
+                    html = WORKS_HTML
 
-            elif val == 'Works':
-                state = 2
-                html = WORKS_HTML
+                elif val == 'Acts':
+                    state = 3
+                    html = ACTS_HTML
 
-            elif val == 'Acts':
-                state = 3
-                html = ACTS_HTML
+                elif val == 'Points':
+                    state = 4
+                    html = POINTS_HTML
 
-            elif val == 'Points':
-                state = 4
-                html = POINTS_HTML
+            else:
+
+                if val == 'Grounds':
+                    state = 5
+                    html = show_xml("grounds")
+
+                elif val == 'Works':
+                    state = 6
+                    html = show_xml("works")
+
+                elif val == 'Acts':
+                    state = 7
+                    html = show_xml("acts")
+
+                elif val == 'Points':
+                    state = 8
+                    html = show_xml("points")
 
         else:
             state = 0
+
 
         body = html
         start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])

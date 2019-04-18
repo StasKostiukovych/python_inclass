@@ -110,9 +110,13 @@ def find_description_rozetka(url):
     return description_dict
 
 
-def Rozetka():
-    url = "https://rozetka.com.ua/ua/search/?text=samsang+s10&producer=12&p=1"
-    all_info = find_links_rozetka(url)
+def Rozetka(request, type_sort="", num_of_pages=5):
+
+    url = "https://rozetka.com.ua/ua/search/?text={}".format(request)
+    if type_sort == "cheap":
+        url += "sort=cheap"
+
+    all_info = find_links_rozetka(url,num_of_pages)
 
     for key, value in all_info.items():
         all_info[key].update(find_description_rozetka(key))
@@ -123,4 +127,4 @@ def Rozetka():
 
 
 if __name__ == '__main__':
-    Rozetka()
+    Rozetka("adidas stan smith")

@@ -1,0 +1,119 @@
+import requests
+import re
+from bs4 import BeautifulSoup
+from random import choice
+import json
+
+
+def get_html(url, proxy=None, ua=None):
+    """
+    Get html with proxy and User Agent using requests
+    :param url: url
+    :param proxy: proxy
+    :param ua: User Agent
+    :return: str html of page
+    """
+    r = requests.get(url, headers=ua, proxies=proxy)
+    return r.text
+
+
+def find_links_asos(html, num=5):
+    """
+
+    :param html: str, html of page
+    :param num: quantity of links
+    :return: links of first num item
+    """
+    links_and_about = {}
+    soup = BeautifulSoup(html, 'lxml')
+    items = soup.find_all('article', {"data-auto-id": "productTile"})
+    for index, item in enumerate(items):
+
+        if index == num:
+            break
+
+        item = item.find('a')
+
+        try:
+
+            descr, sale_price, original_price = item.get('aria-label').split(",")
+            original_price = original_price.split(" ")[-1].replace("Price:", "").strip()
+            sale_price = sale_price.split(" ")[-1].replace("Price:", "").strip()
+
+        except:
+
+            descr, original_price = item.get('aria-label').split(",")
+            original_price = original_price.replace("Price:", "").strip()
+            sale_price = original_price
+
+        templ_dict = {"description" : descr, "price": original_price,
+                      "sale price": sale_price}
+
+        links_and_about[item.get('href')] = templ_dict
+
+    return links_and_about
+
+
+def return_link_with_choosen_characteristic(url, request, type_sort=None,size=None, gender=None):
+    """
+    :param url:
+    :param request: str, example "adidas yung"
+    :param type_sort: cheap ,fresh or relevant
+    :param size: EU size, example: EU 44, M ,etc
+    :param gender: man or woman
+    :return: link with characteristic from above
+    """
+    gender_opt = ""
+    sort_opt = ""
+    size_opt = ""
+
+    if gender == "women":
+        gender_opt = "&refine=floor:1000"
+    elif gender == "man":
+        gender_opt = "&refine=floor:1001"
+
+    if type_sort == "cheap":
+        sort_opt = "&sort=priceasc"
+    elif type_sort == "fresh":
+        sort_opt = "&sort=freshness"
+
+    # sizes.json contain id of asos size to do request
+    with open('sizes.json', 'r') as f:
+        sizes_arr = json.load(f)
+
+    for size_dict in sizes_arr:
+        for key, value in size_dict.items():
+            if value == size.upper():
+                size_opt = "&refine=size_eu:" + str(size_dict['id'])
+
+    return url + request+ size_opt + sort_opt + gender_opt
+
+
+def Asos(request, type_sort=None,size=None, gender=None):
+
+    """
+    Сonnects all asos function
+    :param request: str, example "adidas yung"
+    :param type_sort: cheap ,fresh or relevant
+    :param size: EU size, example: EU 44, M ,etc
+    :param gender: man or woman
+    :return: dict of links and all information
+    """
+
+    url = "https://www.asos.com/search/?&q="
+    useragents = open("useragents.txt").read().split("\n")
+    proxies = open('proxy').read().split('\n')
+    proxy = {'http': 'http://' + choice(proxies)}
+    useragent = {'User-Agent': choice(useragents)}
+
+    new_url = return_link_with_choosen_characteristic(url, request, type_sort=type_sort, gender=gender, size=size)
+    html = get_html(new_url, proxy, useragent)
+    all_info = find_links_asos(html)
+
+    for key, value in all_info.items():
+        print(key, value)
+
+
+if __name__ == "__main__":
+    print(Asos("adidas yung","cheap", "eu 42", "man"))
+

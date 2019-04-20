@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EasyShop.com</title>
+</head>
+<body>
+<form method=POST action="">
+    <h1 style="text-align: center">Enter name of item to find</h1>
+
+    <p style="text-align: center">
+        <input size=50 type=text name=to_search value=""><br>
+
+    <table align="center" style="text-align: center">
+    <tr>
+        <td>Type sort: </td>
+        <td>
+            <select name="type_sort:">
+                <option value="relevant">Relevant</option>
+                <option value="cheap">Price low to high</option>
+                <option value="fresh">What's new</option>
+            </select>
+        </td>
+        <td>Gender: </td>
+        <td>
+            <select name="gender">
+                <option value="any">any</option>
+                <option value="man">man</option>
+                <option value="woman">woman</option>
+            </select>
+        </td>
+
+        <td>Size: </td>
+        <td>
+            {}
+        </td>
+
+        <td>Number of pages: </td>
+        <td>
+            <select name="num">
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="7">7</option>
+            </select>
+        </td>
+    </tr>
+    </table>
+
+    <table align="center" style="text-align: center">
+        <tr>
+        <td>Choose shops: </td>
+        <td>
+            <input type="checkbox" name="shops" value="Asos" checked>Asos.com
+            <input type="checkbox" name="shops" value="Amazon" checked>Amazon.com
+            <input type="checkbox" name="shops" value="Rozetka" checked>Rozetka.com
+        </td>
+        </tr>
+    </table>
+
+    <br>
+    
+    <table align="center" style="text-align: center">
+        <tr>
+        <td>you wanna to search this item periodically?</td>
+        <td>
+            <input type="checkbox" name="repeat" value="yes">yes<br>
+            <input type="checkbox" name="repeat" value="no" checked>no<br>
+        </td>
+
+        <td>  if yes:  </td>
+        <td>
+            <select name="requests">
+                <option value="hour">one per hour</option>
+                <option value="day">one per day</option>
+                <option value="week">one per week</option>
+            </select>
+        </td>
+
+        <td>
+            <text> hours: </text>
+            <text> minutes: </text>
+
+        </td>
+    <tr>
+    </table>
+    <p style="text-align: center">
+        <input type="submit" value="Search">
+
+    <table>
+        <tr>
+        <td>some result</td>
+        <tr>
+    </table>
+
+</form>
+</body>
+</html>

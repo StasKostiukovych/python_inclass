@@ -55,18 +55,21 @@ def find_links_asos(html, num=5):
             break
 
         item = item.find('a')
+        prices = item.get('aria-label').split(",")
 
         try:
+            if len(prices) == 3:
+                descr, sale_price, original_price = prices
+                original_price = original_price.split(" ")[-1].replace("Price:", "").strip()
+                sale_price = sale_price.split(" ")[-1].replace("Price:", "").strip()
 
-            descr, sale_price, original_price = item.get('aria-label').split(",")
-            original_price = original_price.split(" ")[-1].replace("Price:", "").strip()
-            sale_price = sale_price.split(" ")[-1].replace("Price:", "").strip()
+            elif len(prices) == 2:
 
-        except:
-
-            descr, original_price = item.get('aria-label').split(",")
-            original_price = original_price.replace("Price:", "").strip()
-            sale_price = original_price
+                descr, original_price = prices
+                original_price = original_price.replace("Price:", "").strip()
+                sale_price = original_price
+        except Exception as e:
+            print("third", e)
 
         templ_dict = {"description" : descr, "price": original_price,
                       "sale price": sale_price}
@@ -99,6 +102,9 @@ def return_link_with_choosen_characteristic_asos(url, request, type_sort=None,si
     elif type_sort == "fresh":
         sort_opt = "&sort=freshness"
 
+    if size == "None":
+        size = None
+
     request = request.replace(" ", "+")
 
     # sizes.json contain id of asos size to do request
@@ -108,9 +114,9 @@ def return_link_with_choosen_characteristic_asos(url, request, type_sort=None,si
     for size_dict in sizes_arr:
         for key, value in size_dict.items():
             if value == size.upper():
-                size_opt = "size_eu:" + str(size_dict['id'])
+                size_opt = "|size_eu:" + str(size_dict['id'])
 
-    return url + request+ gender_opt + "|" + size_opt + sort_opt
+    return url + request+ gender_opt  + size_opt + sort_opt
 
 
 def Asos(request, type_sort=None,size=None, gender=None, num_pages=5):
@@ -132,7 +138,6 @@ def Asos(request, type_sort=None,size=None, gender=None, num_pages=5):
     new_url = return_link_with_choosen_characteristic_asos(url, request, type_sort=type_sort, gender=gender, size=size)
     html = get_html(new_url, proxy, useragent)
     all_info = find_links_asos(html, num_pages)
-    print(new_url)
     return all_info
 
 
@@ -156,8 +161,7 @@ def find_links_amazon(html,num=5):
             index += 1
             array_of_links.append(namehost + new_span.find('a').get('href'))
 
-        else:
-            index -= 1
+
 
     return array_of_links
 
@@ -202,21 +206,28 @@ def find_description_amazon(link, proxy, useragent):
 
     div = soup.find("div", {"id":"productDescription"})
     if div:
-        description_dict[link].update({"description": div.find("p").next.strip()})
+
+        p = div.find("p")
+        #print(p.next.strip())
+
+        try:
+            description_dict[link].update({"description": p.next.strip()})
+        except Exception as e:
+            print("four excep:", e)
 
     else:
-        description_dict.update({"description": "NaN"})
+        description_dict[link].update({"description": "NaN"})
 
     return description_dict
 
 
-def Amazon(request, type_sort=None, gender=None, num_pages=5):
+def Amazon(request, type_sort=None, gender=None,size=None, num_pages=5):
 
     all_info = {}
+    if type_sort == "relevant":
+        sort_opt = ""
 
-    sort_opt = ""
-
-    if type_sort == "cheap":
+    elif type_sort == "cheap":
         sort_opt = "&s=price-asc-rank"
 
     elif type_sort == "fresh":
@@ -224,11 +235,14 @@ def Amazon(request, type_sort=None, gender=None, num_pages=5):
 
     request = request.replace(" ", "+")
     if gender:
-        request += "+" + gender
+        if gender != "any":
+            request += "+" + gender
+
+        else:
+            pass
 
     url = "https://www.amazon.com/s?k="
     new_url = url + request + sort_opt
-    print()
 
 
     useragents = open("useragents.txt").read().split("\n")
@@ -247,19 +261,6 @@ def Amazon(request, type_sort=None, gender=None, num_pages=5):
 # ----------------------------------------Rozetka--------------------------------------------------
 
 
-def return_data(url):
-    """
-    using urllib.request
-    :param url: url
-    :return: html of page
-    """
-    http_file = urlopen(url)
-    enc = getencoding(http_file)
-    request = urlopen(url)
-    data = str(request.read(), encoding=enc, errors='ignore')
-    return data
-
-
 def find_links_rozetka(url, max_iter=5):
     """
     :param url: url to find those links
@@ -267,7 +268,7 @@ def find_links_rozetka(url, max_iter=5):
     :return: links of first max_iter item
     """
     links_and_avalible_opt = {}
-    html = return_data(url)
+    html = get_html(url)
     soup = BeautifulSoup(html, 'lxml')
     iters = 1
 
@@ -275,12 +276,12 @@ def find_links_rozetka(url, max_iter=5):
     ul = soup.find_all('ul',{'class': "cat-variants-l clearfix"})
     for item in ul:
         # avalible option
-        avalible = ""
+        avalible = []
         avalible_items = item.find_all('a')
         for avalible_item in avalible_items:
-            avalible += str(avalible_item.next) + ", "
+            avalible .append(avalible_item.next)
         href = avalible_items[0].get('href')
-        links_and_avalible_opt[href] = {"avalible": avalible}
+        links_and_avalible_opt[href] = {"size": avalible}
         if iters >= max_iter:
             break
         iters += 1
@@ -304,16 +305,18 @@ def find_description_rozetka(url):
     :return: dict with urls and all characteristics
     """
     description_dict = {}
-    html = return_data(url)
+    html = get_html(url)
     soup = BeautifulSoup(html, 'lxml')
     description_array_html = soup.find_all('tr', {"class": "ng-star-inserted"})
 
     price = soup.find("span", {"class":"detail-price-uah"})
 
     try:
-        description_dict["price"] = str(unidecode.unidecode(price.next.string))
+        if price:
+            description_dict["price"] = str(unidecode.unidecode(price.next.string))
     except Exception as e:
         print("first exept", e)
+
         description_dict["price"] = ""
 
     for descr in description_array_html:
@@ -323,7 +326,11 @@ def find_description_rozetka(url):
             # if we have 2 args
             try:
                 # form our dict
-                description_dict[str(descr.find('span').next)] = str(descr.find('a', {"class": "ng-star-inserted"}).next)
+                key = descr.find('span')
+                value = descr.find('a', {"class": "ng-star-inserted"})
+                if key and value:
+                    description_dict[str(key.next)] = str(value.next)
+
 
             except Exception as s:
                 print("second exep",s)
@@ -347,13 +354,16 @@ def find_description_rozetka(url):
 
 
 
-def Rozetka(request, type_sort="",gender=None, size="44", num_of_pages=5):
+def Rozetka(request, type_sort="",gender=None, size=None, num_of_pages=5):
     """
     :param request: str, example "adidas yung"
     :param type_sort: str, sheap or relevant
     :param num_of_pages:
     :return:
     """
+    if size == "None":
+        size = None
+
     gender_opt = ""
     if gender == "man":
         gender_opt = "чоловічі"
@@ -389,8 +399,14 @@ def Rozetka(request, type_sort="",gender=None, size="44", num_of_pages=5):
 
 if __name__ == "__main__":
     pass
-    #print(Asos("adidas yung 1","cheap", "l", "man"))
-    #print(Amazon("adidas yung 1","cheap", "man"))
+    #print(Asos("adidas stan smith","cheap", 'eu 43', "man"))
+    print(Amazon("adidas yung 1", "cheap", "man"))
     #print(Rozetka("adidas stan smith", "cheap", "man", "43"))
+
+
+
+
+
+
 
 

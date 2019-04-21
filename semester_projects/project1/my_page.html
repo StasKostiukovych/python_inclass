@@ -95,26 +95,30 @@ HTML_PAGE ="""
     <p style="text-align: center">
         <input type="submit" value="Search">
 
-    <table>
-        <tr>
-        <td>
-            <b><pre>Ціна                Посилання на товар</pre></b>
-            <b><pre>Ціна зі знижкою     Опис</pre></b>
-        </td>
-    </table>
-    
     {}
 </form>
 </body>
 </html>
 """
 
+
+item_table_descr = """
+<table>
+    <tr>
+    <td>
+        <b><pre>Ціна                Посилання на товар</pre></b>
+        <b><pre>Ціна зі знижкою     Опис</pre></b>
+    </td>
+</table>
+"""
+
 item_tables = """
+
 <table>
     <tr>
     <td>
         <pre>{}               <a href="{}">{}</a></pre><br />
-        <pre>{}               {}</pre>
+        <pre>{} {}</pre>
     </td>
 </table>
 """
@@ -139,6 +143,12 @@ def convert(val_str, to_valuta="UAH"):
             coef = inf[-1][req]
             return str(round(coef * float(val_str[1:])))
 
+        elif val_str.startswith("$"):
+            req = "USD_" + to_valuta
+            coef = inf[-1][req]
+            return str(round(coef * float(val_str[1:])))
+
+
         else:
             return val_str.strip()
 
@@ -146,7 +156,7 @@ def convert(val_str, to_valuta="UAH"):
 class Server:
     def __init__(self):
 
-        self.list_sizes = [str(i) for i in range(35, 49)] + ["XXS", "XS", "S", "M", "L", "XL", "XXL"]
+        self.list_sizes = [None] + [str(i) for i in range(35, 49)] + ["XXS", "XS", "S", "M", "L", "XL", "XXL"]
 
 
     def make_listbox(self, name, values):
@@ -163,55 +173,73 @@ class Server:
 
         for shop in shops:
 
-            if shop == "Asos.com":
+            if shop == "Asos":
                 all_info.append(my_parsers.Asos(request, type_sort, gender, size, num))
 
-            elif shop == "Amazon.com":
+            elif shop == "Amazon":
                 all_info.append(my_parsers.Amazon(request, type_sort, gender, size, num))
 
-            elif shop == "Rozetka.com":
+            elif shop == "Rozetka":
                 all_info.append(my_parsers.Rozetka(request, type_sort, gender, size, num))
 
         return all_info
 
-    def info_to_form(self, dict_info):
+    def info_to_form(self, info):
         full_info = ""
+        if len(info) == 0:
+            return ""
 
-        for shop in dict_info:
+        for shop in info:
 
-            descr = ""
+
             price = ""
 
             sale_price = ""
+            if len(list(shop.keys())) !=0:
+                site = re.findall('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', list(shop.keys())[0])[0]
+                site = str(site).replace("https://", "")
+            else:
+                site = ""
+            full_info += '<h1 style="text-align: center">{}</h1>'.format(site)
+
 
             for link, information in shop.items():
+
                 href = link
-                site = re.findall('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', link)[0]
-                site = str(site).replace("https://", "")
+
                 descr = ""
-                full_info += '<h1 style="text-align: center">{}</h1>'.format(site)
-                for name, value in information.items():
+                sizes = ""
 
-                    if name == "price":
-                        price = convert(value)
+                if information["price"] != "NaN":
 
 
-                    elif name == "sale price":
-                        sale_price = convert(value)
+
+                    for name, value in information.items():
 
 
-                    elif name == "size":
-                        sizes = "Також доступні опції(розмри): " + ", ".join(value) + "<br>\n"
+                        if name == "price":
 
-                    elif name == "description":
-                        descr = sizes + "Про товар: " + value
+                            price = convert(value)
 
-                    else:
-                        descr += sizes + name + " : " + value + "<br>\n"
+                        elif name == "sale price":
+                            sale_price = convert(value)
+
+                        elif name == "size":
+                            sizes = "Також доступні опції(розмри): " + ", ".join(value) + "<br>\n"
+                            sizes = "<br>".join([sizes[i:i+100] for i in range(0, len(sizes), 100)])
+                            descr += sizes
+
+                        elif name == "description":
+                            
+                            d = "<br>".join([value[i:i+100] for i in range(0, len(value), 100)])
+                            descr += "Про товар: " + d
+
+                        else:
+                            descr += name + " : " + value + "<br>\n"
 
                 full_info += item_tables.format(price, href, site, sale_price, descr)
             full_info += "<br>\n"
-        return full_info
+        return item_table_descr +"<br>" + full_info
 
 
     def application(self, environ, start_response):
@@ -246,8 +274,9 @@ class Server:
                 minutes = form.getvalue("minutes")
 
 
-                dict_info = self.combine_shops(shops, request, type_sort, gender, size, num)
-                result = self.info_to_form(dict_info)
+            info = self.combine_shops(shops, request, type_sort, gender, size, int(num))
+            result = self.info_to_form(info)
+            #result = (shops, request, type_sort, gender, size, num)
 
 
             body = HTML_PAGE.format(self.make_listbox("size", self.list_sizes),
@@ -273,6 +302,7 @@ class Server:
 if __name__ == '__main__':
     s = Server()
     s.start_server()
-
+    #arr = s.combine_shops(["Asos.com", "Amazon.com", "Rozetka.com"], "adidas stan smith", "cheap", "man", "43", 3)
+    #print(s.info_to_form(arr))
     #print(my_parsers.Asos("adidas yung 1", "cheap", "44", "man"))
 

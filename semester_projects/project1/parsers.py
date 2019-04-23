@@ -381,9 +381,10 @@ def Rozetka(request, type_sort="",gender=None, size=None, num_of_pages=5):
     li = soup.find_all("li", {"class": "filter-parametrs-tile-l-i"})
 
     if li:
+
         for tag_li in li:
             a = tag_li.find('a')
-            if a.next == size:
+            if str(a.next)[0:2] == size:
                 new_url = a.get('href')
 
     if type_sort == "cheap":
@@ -397,10 +398,119 @@ def Rozetka(request, type_sort="",gender=None, size=None, num_of_pages=5):
     return all_info
 
 
+# ----------------------------------------Lamoda--------------------------------------------------
+
+
+def find_links_lamoda(html, max_iter=5):
+
+    links_and_avalible_opt = {}
+    soup = BeautifulSoup(html, "lxml")
+
+    divs = soup.find_all("div", {"class":"products-list-item"})
+
+    for index, div in enumerate(divs):
+
+        if index == max_iter:
+            break
+
+        price = div.get("data-price")
+        href = div.find('a').get('href')
+        href = "https://www.lamoda.ua" + href
+
+        links_and_avalible_opt[href] = {"price": price}
+
+        sale_price_templ = div.find("div",{"class":"products-list-item__cd js-cd-timer hidden"})
+
+        if sale_price_templ:
+
+            try:
+                sale_price_templ = sale_price_templ.get('data-countdown')
+                json_sale_price = json.loads(str(sale_price_templ))
+                sale_price = json_sale_price[0]["action_price"]
+                links_and_avalible_opt[href].update({"sale price": sale_price})
+
+            except Exception as e:
+                print("fivs except:", e)
+
+        sizes_tags = div.find_all("div", {"class":"products-list-item__sizes"})
+        if sizes_tags:
+            for sizes_tag in sizes_tags:
+                sizes = [size.next for size in sizes_tag.find_all('a')]
+                links_and_avalible_opt[href].update({"size": sizes})
+
+    return links_and_avalible_opt
+
+
+def find_description_lamoda(link):
+    descr = {}
+    html = get_html(link)
+    soup = BeautifulSoup(html, "lxml")
+
+    div = soup.find('div', {'class':'ii-product__description-text'})
+
+    descr_labels = [d.next for d in div.find_all('span', {'class':'ii-product__attribute-label'})]
+    descr_values = [d.next for d in div.find_all('span', {'class':'ii-product__attribute-value'})]
+
+    for i in range(len(descr_values)):
+        descr[descr_labels[i]] = descr_values[i]
+
+    return descr
+
+
+
+def Lamoda(request, type_sort="", size=None,gender=None, num_of_pages=5):
+
+    sort_opt = ""
+    size_opt = ""
+
+
+    if request == None:
+        return ""
+
+    if size.isalpha():
+        size = size.upper()
+
+    request = request.replace(" ", "+")
+
+    if type_sort == "cheap":
+        sort_opt = "&sort=price_asc"
+
+    elif type_sort =="fresh":
+        sort_opt = "&sort=new"
+
+
+    if size:
+        size_opt = "&size_values=" + str(size)
+
+    url = "https://www.lamoda.ua/catalogsearch/result/?q=" + request + sort_opt + size_opt
+
+    if gender:
+
+        if gender == "woman":
+            url = "https://www.lamoda.ua/c/4153/default-women/?q=" + request + sort_opt + size_opt
+
+        elif gender == "men":
+            url = "https://www.lamoda.ua/c/4152/default-men/?q=" + request + sort_opt + size_opt
+    #print(url)
+
+
+    html = get_html(url)
+
+    all_info = find_links_lamoda(html)
+
+    for key, values in all_info.items():
+        values.update(find_description_lamoda(key))
+
+    return all_info
+
+
+
+
 if __name__ == "__main__":
     pass
+    #print(Lamoda("adidas stan smith","cheap", '44', "man"))
     #print(Asos("adidas stan smith","cheap", 'eu 43', "man"))
-    print(Amazon("adidas yung 1", "cheap", "man"))
+    #print(Amazon("adidas yung 1", "cheap", "man"))
     #print(Rozetka("adidas stan smith", "cheap", "man", "43"))
 
 

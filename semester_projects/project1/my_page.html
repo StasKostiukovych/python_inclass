@@ -64,6 +64,30 @@ HTML_PAGE = """<!DOCTYPE html>
         </td>
         </tr>
     </table>
+    
+    <table>
+
+        <tr>
+            <td>Show event log by start - end time:<br></td>
+            <td>From:</td>
+            <td>
+                {}
+            </td>
+    
+            <td>
+                {}
+            </td>
+            <td>To:</td>
+            <td>
+                {}
+            </td>
+    
+            <td>
+                {}
+            </td>
+        <tr>
+        
+    </table>
 
     <table align="center" style="text-align: center">
         <tr>
@@ -103,6 +127,10 @@ item_tables = """
 </table>
 """
 
+show_info_form = """
+
+"""
+
 
 def make_listbox(name, values):
     select_block = '<select name="{0}">\n{1}</select>\n'
@@ -110,7 +138,6 @@ def make_listbox(name, values):
     option_block = '<option value="{0}">{0}</option>\n'
 
     return select_block.format(name, ''.join(option_block.format(v) for v in values))
-
 
 def convert(val_str, to_valuta="UAH"):
 
@@ -160,7 +187,7 @@ class AllInfoBd:
         curs.execute("""
         CREATE TABLE all_info
         (id integer primary key autoincrement, 
-        time,
+        time timestamp,
         type_request,
         request, 
         type_sort, 
@@ -187,43 +214,29 @@ class AllInfoBd:
 
     def add_all_info(self, type_request, request, type_sort, gender, size, num):
 
-        time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        time = datetime.datetime.now() #.strftime('%Y-%m-%d %H:%M:%S')
 
-        try:
-            ID = int(self.get_id()) + 1
-        except Exception as e:
-            print("second exception", e)
-            ID = 1
-
-        conn = sqlite3.connect(self.filename)
+        conn = sqlite3.connect(self.filename, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
 
         curs = conn.cursor()
 
-        curs.execute("INSERT INTO all_info VALUES (? ,?, ?, ?, ?, ?, ?, ?)", (str(ID), time,type_request, request,
+        curs.execute("INSERT INTO all_info (time, type_request, request, type_sort, gender, size, num) VALUES (?, ?, ? ,? ,? , ?, ?)", (time, type_request, request,
                                                                             type_sort, gender, size, num))
+
+        ID = curs.execute("SELECT MAX(id) FROM all_info")
+        ID = ID.fetchone()[0]
         conn.commit()
         conn.close()
-
         return ID
 
     def add_sites(self, name_site, href, price, sale_price, descr, other_info, sites_id):
         conn = sqlite3.connect(self.filename)
         curs = conn.cursor()
         curs.execute("insert into sites (name_site ,href , price, sale_price, descr, other_info, sites_id) "
-                     "values (?, ?, ? ,? ,? , ?, ?)", (name_site, href, price, sale_price, descr, other_info, str(sites_id)))
+                     "values (?, ?, ? ,? ,? , ?, ?)", (name_site, href, price, sale_price, descr, other_info, sites_id))
         conn.commit()
         conn.close()
 
-    def get_id(self):
-        conn = sqlite3.connect(self.filename)
-        curs = conn.cursor()
-
-        ID = curs.execute("SELECT MAX(id) FROM all_info")
-        ID = ID.fetchone()
-
-        conn.close()
-
-        return ID[0]
 
     def return_info(self):
         conn = sqlite3.connect(self.filename)
@@ -237,14 +250,36 @@ class AllInfoBd:
         conn = sqlite3.connect(self.filename)
         curs = conn.cursor()
 
-        rez = curs.execute("SELECT * FROM sites where sites_id = (?);", (str(ID)))
+        select_id = "SELECT * FROM sites Where sites.sites_id={}".format(str(ID))
+        rez = curs.execute(select_id)
+
         sites = rez.fetchall()
         conn.close()
-
         return sites
 
     def print_all(self):
         info_array = self.return_info()
+        to_print = ""
+
+        for info in info_array:
+            to_print += "<b>"
+            for something in info:
+                to_print += str(something) + " "
+
+            to_print += "</b><br>\n"
+
+            for site_descr in self.return_sites(info[0]):
+                to_print += str(site_descr) + "<br><br>\n"
+
+            to_print += "<br>\n"
+        return to_print
+
+    def info_with_time(self, start_time, end_time):
+        conn = sqlite3.connect(self.filename)
+        curs = conn.cursor()
+        rez = curs.execute("SELECT * FROM all_info WHERE strftime('%Y-%m-%d', time) BETWEEN (?) AND (?);",(start_time, end_time))
+        info_array = rez.fetchall()
+        conn.close()
         to_print = ""
 
         for info in info_array:
@@ -266,6 +301,10 @@ class Server(AllInfoBd):
 
         AllInfoBd.__init__(self)
         self.list_sizes = ["None"] + [str(i) for i in range(35, 49)] + ["XXS", "XS", "S", "M", "L", "XL", "XXL"]
+        self.days = ["0" + str(i) for i in range(1, 10)] + [str(i) for i in range(10, 32)]
+        self.month = ["0" + str(i) for i in range(1, 10)] + ["10", "11", "12"]
+
+
 
     def combine_shops(self, shops, request, type_sort, gender, size, num):
 
@@ -366,6 +405,7 @@ class Server(AllInfoBd):
                 if 'to_search' in form:
 
                     request = form['to_search'].value
+
                     type_sort = form.getvalue("type_sort")
                     gender = form.getvalue("gender")
                     size = form.getvalue("size")
@@ -376,9 +416,16 @@ class Server(AllInfoBd):
                 result = self.info_to_form(info, ID)
 
             elif form["submit"].value  == "Show":
-                result = self.print_all()
 
-            body = HTML_PAGE.format(make_listbox("size", self.list_sizes), result)
+                start_time = str(2019) + "-" + str(form.getvalue("month_from")) + "-" + str(form.getvalue("day_from"))
+                end_time = str(2019) + "-" + str(form.getvalue("month_to")) + "-" + str(form.getvalue("day_to"))
+                result = self.info_with_time(start_time, end_time)
+
+            body = HTML_PAGE.format(make_listbox("size", self.list_sizes),
+                                    make_listbox("day_from", self.days),
+                                    make_listbox("month_from", self.month),
+                                    make_listbox("day_to", self.days),
+                                    make_listbox("month_to", self.month), result)
 
             start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
         else:

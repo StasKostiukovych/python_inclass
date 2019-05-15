@@ -82,21 +82,12 @@ class Parser:
     def change_time(self, server_time):
         now = datetime.datetime.now()
         dt = datetime.datetime.strptime(server_time, '%Y,%m,%d,%H,%M,%S')
-        print(now)
-        print(dt)
+     
 
         if now != dt:
             subprocess.call(['sudo', 'date', '-s', '{:}'.format(dt.strftime('%Y-%m-%d %H:%M:%S'))], shell=True)
             #print("success!!!")
 
-
-    def _linux_set_time(self,  server_time):
-        dt = datetime.datetime.strptime(server_time, '%Y,%m,%d,%H,%M,%S')
-        time_string = dt.strftime('%Y-%m-%d %H:%M:%S')
-
-        #subprocess.call(shlex.split("timedatectl set-ntp false"))  # May be necessary
-        subprocess.call(shlex.split("sudo date -s '%s'" % time_string))
-        subprocess.call(shlex.split("sudo hwclock -w"))
 
 
 
